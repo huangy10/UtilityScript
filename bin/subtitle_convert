@@ -1,0 +1,24 @@
+#!/usr/local/bin/python
+import chardet
+import argparse
+
+parser = argparse.ArgumentParser(description="Convert encoding of subtitle files")
+parser.add_argument("filename", type=str, help="input file")
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+    filename = args.filename
+    with open(filename, 'r+') as f:
+        data = f.read()
+        encodings = chardet.detect(data)
+        if encodings["encoding"] == "utf-8":
+            print("File already encoded in utf-8")
+            exit
+        try:
+            data = data.decode(encodings["encoding"]).encode("utf-8")
+        except UnicodeDecodeError:
+            data = data.decode("GBK").encode("utf-8")
+        f.seek(0)
+        f.write(data)
+        f.truncate()
+
