@@ -2,6 +2,8 @@
 import os
 import chardet
 import argparse
+import asstosrt
+import codecs
 
 parser = argparse.ArgumentParser(description="Convert encoding of subtitle files")
 parser.add_argument("filename", type=str, help="input file")
@@ -20,15 +22,42 @@ def convert_file(file_name):
         f.seek(0)
         f.write(data)
         f.truncate()
+        f.seek(0)
 
-if __name__ == "__main__":
+
+def convert_ass_to_srt(ass_file):
+    elements = ass_file.split(".")
+    ext = elements[-1]
+    if ext != "ass":
+        return
+    in_codec = codecs.lookup("utf-8")
+    filename = ".".join(elements[0:-1])
+    srt_output = filename + ".srt"
+    with open(ass_file) as f:
+        srt_str = asstosrt.convert(in_codec.streamreader(f), no_effect=True, only_first_line=True)
+        output = open(srt_output, "w")
+        output.write(srt_str.encode("utf-8"))
+        output.close()
+        print("Convert to srt file %s" % srt_output)
+
+
+def main():
     args = parser.parse_args()
     filename = args.filename
     if os.path.isfile(filename):
         convert_file(filename)
     else:
-        subtitle_files = [f for f in os.listdir(filename) if os.path.isfile(f) and f.endswith(".srt")]
+        subtitle_files = [f for f in os.listdir(filename) if os.path.isfile(f)]
         for f in subtitle_files:
+            elements = f.split(".")
+            ext = elements[-1]
+            if ext not in ["srt", "ass"]:
+                continue
             print("converting %s" % f)
             convert_file(f)
+            if ext == "ass":
+                convert_ass_to_srt(f)
+
+if __name__ == "__main__":
+    main()
 

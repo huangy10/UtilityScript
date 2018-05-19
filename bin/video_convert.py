@@ -6,18 +6,23 @@ import subprocess
 import datetime
 
 
-parser = argparse.ArgumentParser(description="Auto Convert Videos")
-parser.add_argument("input", type=str, help="input file or dir")
-parser.add_argument("-r", "--recursively", action="store_true", help="Convert Recursively")
-parser.add_argument("-f", "--force", action="store_true", help="Force to convert video")
-
+def _set_cmd_args():
+    parser = argparse.ArgumentParser(description="Auto Convert Videos")
+    parser.add_argument("input", type=str, help="input file or dir")
+    parser.add_argument("-r", "--recursively", action="store_true", help="Convert Recursively")
+    parser.add_argument("-f", "--force", action="store_true", help="Force to convert video")
+    parser.add_argument("--cuda", action="store_true", help="accelate with gpu")
+    parser.add_argument("--gpu", default=0, help="gpu index to use")
+    return parser
 
 class VideoConverter(object):
     
-    def __init__(self, recursively, force, remove_origin):
-        self.recursively = recursively
-        self.force = force
+    def __init__(self, opts, remove_origin=True):
+        self.recursively = opts.recursively
+        self.force = opts.force
         self.remove_origin = remove_origin
+        self.use_cuda = opts.cuda
+        self.gpu = opts.gpu
     
     def need_convert(self, filename):
         if self.force:
@@ -48,6 +53,16 @@ class VideoConverter(object):
             else:
                 break
         return output_file_name
+    
+    def get_ffmpeg_command(self, input_file, output_file):
+        if self.use_cuda:
+            res = 'ffmpeg -y -hwaccel cuvid -i "{input_file}" -c:v h264_nvenc -gpu {gpu_idx} -pix_fmt yuv420p "{output_file}" > vc.log'.format(
+                input_file=input_file, output_file=output_file, gpu_idx=self.gpu)
+            print("Running command: " + res)
+            return res
+        else:
+            return 'ffmpeg -i "{input_file}" -vcodec h264 -strict -2 "{output_file}" > vc.log'.format(
+                input_file=input_file, output_file=output_file)
 
     def convert_video(self, file_path):
         elements = file_path.split(".")
@@ -56,14 +71,12 @@ class VideoConverter(object):
             print("Unsupported format, skipping %s" % file_path)
             return
         filename = ".".join(elements[0: -1])
-        if not self.need_convert(file_path):
+        if ext == "mp4" and not self.need_convert(file_path):
             print("Skipping will-formated file %s" % file_path)
             return
         print("Converting video file %s" % file_path)
         start_at = datetime.datetime.now()
-        res = subprocess.call('ffmpeg -i "{input_file}" -vcodec h264 -strict -2 "{output_file}" > /dev/null'.format(
-            input_file=file_path,
-            output_file=self.get_non_duplicate_filename(filename)), shell=True)
+        res = subprocess.call(self.get_ffmpeg_command(file_path, self.get_non_duplicate_filename(filename)), shell=True)
         run_time = datetime.datetime.now() - start_at
         print("Time takes: %s" % run_time)
         if res == 0:
@@ -92,19 +105,25 @@ class VideoConverter(object):
             self.convert_video_dir(input_path)
 
 
-if __name__ == "__main__":
+
+def main():
+    parser = _set_cmd_args()
     args = parser.parse_args()
     input_filename = args.input
-    recursively = args.recursively
-    force = args.force
     start_at = datetime.datetime.now()
     print("start at %s" % start_at)
+    if args.cuda:
+        print("using cuda")
 
-    converter = VideoConverter(recursively, force, True)
+    converter = VideoConverter(args)
     converter.convert(input_filename)
 
     end_at = datetime.datetime.now()
     print("end at %s" % end_at)
     print("total time: %s" % (end_at - start_at))
+
+
+if __name__ == "__main__":
+    main()
     
     
