@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from __future__ import print_function
 import os
 import json
 import argparse
@@ -67,7 +68,7 @@ class VideoConverter(object):
     def convert_video(self, file_path):
         elements = file_path.split(".")
         ext = elements[-1]
-        if ext not in ["m4a", "mkv", "ts", "mp4"]:
+        if ext not in ["m4a", "mkv", "ts", "mp4", "avi", "iso"]:
             print("Unsupported format, skipping %s" % file_path)
             return
         filename = ".".join(elements[0: -1])
@@ -90,9 +91,15 @@ class VideoConverter(object):
         tasks = [video_dir]
         while len(tasks) != 0:
             working_dir = tasks.pop(0)
+            if not os.path.exists(working_dir):
+                print("Ignoring non-exist directory %s" % working_dir)
+                continue
             print("Entering %s" % working_dir)
             for f in os.listdir(working_dir):
                 f = os.path.join(working_dir, f)
+                if not os.path.exists(f):
+                    print("Ignoring non-exist file %s" % f)
+                    continue
                 if os.path.isfile(f):
                     self.convert_video(f)
                 elif self.recursively:
