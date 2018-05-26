@@ -1,2 +1,2 @@
 #!/bin/bash
-ps -ax | awk '$4 ~ /synergy-service/ {kill $1}'
+ps -ax | awk '$4 ~ /synergy-service/ {print $1; kill $1}'
