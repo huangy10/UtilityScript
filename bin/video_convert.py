@@ -14,6 +14,7 @@ def _set_cmd_args():
     parser.add_argument("-f", "--force", action="store_true", help="Force to convert video")
     parser.add_argument("--cuda", action="store_true", help="accelate with gpu")
     parser.add_argument("--gpu", default=0, help="gpu index to use")
+    parser.add_argument("-hq", action="store_true", help="convert with high quality")
     return parser
 
 class VideoConverter(object):
@@ -24,6 +25,7 @@ class VideoConverter(object):
         self.remove_origin = remove_origin
         self.use_cuda = opts.cuda
         self.gpu = opts.gpu
+        self.high_quality = opts.hq
     
     def need_convert(self, filename):
         if self.force:
@@ -57,12 +59,16 @@ class VideoConverter(object):
     
     def get_ffmpeg_command(self, input_file, output_file):
         if self.use_cuda:
-            res = 'ffmpeg -y -hwaccel cuvid -i "{input_file}" -c:v h264_nvenc -gpu {gpu_idx} -pix_fmt yuv420p "{output_file}" > vc.log'.format(
-                input_file=input_file, output_file=output_file, gpu_idx=self.gpu)
+            if self.high_quality:
+                high_quality_config = "-preset slow -rc vbr_hq -b:v 8M -maxrate:v 10M"
+            else:
+                high_quality_config = ""
+            res = 'ffmpeg -y -hwaccel cuvid -i "{input_file}" -c:v h264_nvenc -gpu {gpu_idx} -pix_fmt yuv420p {high_quality_config} "{output_file}"'.format(
+                input_file=input_file, output_file=output_file, gpu_idx=self.gpu, high_quality_config=high_quality_config)
             print("Running command: " + res)
             return res
         else:
-            return 'ffmpeg -i "{input_file}" -vcodec h264 -strict -2 "{output_file}" > vc.log'.format(
+            return 'ffmpeg -i "{input_file}" -vcodec h264 -strict -2 "{output_file}"'.format(
                 input_file=input_file, output_file=output_file)
 
     def convert_video(self, file_path):
