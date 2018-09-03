@@ -1,2 +1,3 @@
-/bin/my_epstopdf_temp.eps
-/bin/.my_epstopdf.swp
+scripts/my_epstopdf_temp.eps
+scripts/.my_epstopdf.swp
+bin
