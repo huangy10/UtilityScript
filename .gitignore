@@ -1,3 +1,5 @@
 scripts/my_epstopdf_temp.eps
 scripts/.my_epstopdf.swp
 bin
+
+.vscode
